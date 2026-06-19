@@ -298,9 +298,9 @@ function renderDetails(
     <div class="details-container">
         <div class="events-section">
  
-            <h2>
+            <h3>
                 Prossime Partite
-            </h2>
+            </h3>
 
             ${createEventsList(prossimiEventi)}
 
@@ -308,9 +308,9 @@ function renderDetails(
 
         <div class="events-section">
 
-            <h2>
+            <h3>
                 Ultimi Risultati
-            </h2>
+            </h3>
 
             ${createResultsList(ultimiEventi)}
 
@@ -336,7 +336,7 @@ function renderFavorites() {
         <h3>${team.nome}</h3>
         <p>${team.lega}</p>
         <p>${team.paese}</p>
-        <button class="removeBtn">Rimuovi</button>`;
+        <button class="removeBtn">🗑️ Rimuovi</button>`;
         card.addEventListener("click", () => {
             loadTeamDetails(team.id, team.nome);
         });
@@ -372,9 +372,9 @@ function createEventsList(
 
                 <li>
 
-                    <strong>
+                    <p>
                         ${evento.getDataFormattata()}
-                    </strong>
+                    </p>
 
                     <br>
 
@@ -412,17 +412,23 @@ function createResultsList(
 
                 <li>
 
-                    <strong>
+                    <p>
                         ${evento.getDataFormattata()}
-                    </strong>
+                    </p>
 
                     <br>
 
-                    ${evento.casa}
-
-                    ${evento.getPunteggio()}
-
-                    ${evento.trasferta}
+                    <div class="matchRow">
+                       <span>
+                           ${evento.casa}
+                           vs
+                           ${evento.trasferta}
+                        </span>
+                        
+                        <span class="scoreBadge">
+                            ${evento.getPunteggio()}
+                        </span>
+                        </div>
 
                 </li>
 
