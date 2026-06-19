@@ -77,75 +77,75 @@ class Evento {
 }
 
 // === API ===
-const API_URL =
-    "https://www.thesportsdb.com/api/v1/json/3";
+const API_URL = "https://www.thesportsdb.com/api/v1/json/3";
 
-form.addEventListener(
-    "submit",
-    async (e) => {
+const searchTeams = async (query) => {
 
-        e.preventDefault();
+    if (!query) return;
 
-        const query =
-            input.value.trim();
+    results.innerHTML = "";
+    eventSection.hidden = true;
+    events.innerHTML = "";
+    alertBox.innerHTML = "";
 
-        if (!query) return;
+    spinner.classList.remove("hidden");
 
-        results.innerHTML = "";
-        eventSection.hidden = true;
-        events.innerHTML = "";
-        alertBox.innerHTML = "";
+    try {
 
-        spinner.classList.remove(
-            "hidden"
+        const response = await fetch(
+            `${API_URL}/searchteams.php?t=${encodeURIComponent(query)}`
         );
 
-        try {
-
-            const response =
-                await fetch(
-                    `${API_URL}/searchteams.php?t=${encodeURIComponent(query)}`
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    "Errore nella richiesta"
-                );
-            }
-
-            const data =
-                await response.json();
-
-            const squadre =
-                data.teams
-                    ? data.teams.map(
-                        team =>
-                            new Squadra(team)
-                    )
-                    : null;
-
-            renderTeams(squadre);
-
-        } catch (error) {
-
-            showError(
-                "Errore durante la ricerca"
-            );
-
-        } finally {
-
-            spinner.classList.add(
-                "hidden"
-            );
-
+        if (!response.ok) {
+            throw new Error();
         }
 
+        const data = await response.json();
+
+        const squadre = data.teams
+            ? data.teams.map(team => new Squadra(team))
+            : null;
+
+        renderTeams(squadre);
+
+    } catch {
+
+        showError("Errore durante la ricerca");
+
+    } finally {
+
+        spinner.classList.add("hidden");
     }
-);
+};
+
+form.addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    searchTeams(input.value.trim());
+
+    const query =
+        input.value.trim();
+});
+
+let debounceTimer;
+
+input.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    const query = input.value.trim();
+
+    if (!query) {
+        results.innerHTML = "";
+        return;
+    }
+    debounceTimer = setTimeout(() => {
+        searchTeams(query);
+    }, 500);
+});
 
 async function loadTeamDetails(
-    
-    teamId
+
+    teamId, teamName
 ) {
 
     eventSection.hidden = false;
@@ -180,6 +180,7 @@ async function loadTeamDetails(
                 : [];
 
         renderDetails(
+            teamName,
             prossimiEventi,
             ultimiEventi
         );
@@ -224,90 +225,6 @@ async function getLastEvents(
 
     return response.json();
 }
-
-
-async function loadTeamDetails(
-    
-    teamId
-) {
-
-    eventSection.hidden = false;
-
-    events.innerHTML =
-        `<div class="loader"></div>`;
-
-    try {
-
-        const [
-            nextData,
-            lastData
-        ] = await Promise.all([
-            getNextEvents(teamId),
-            getLastEvents(teamId)
-        ]);
-
-        const prossimiEventi =
-            nextData.events
-                ? nextData.events.map(
-                    event =>
-                        new Evento(event)
-                )
-                : [];
-
-        const ultimiEventi =
-            lastData.results
-                ? lastData.results.map(
-                    event =>
-                        new Evento(event)
-                )
-                : [];
-
-        renderDetails(
-            prossimiEventi,
-            ultimiEventi
-        );
-
-    } catch (error) {
-
-        showError(
-            "Errore nel caricamento eventi"
-        );
-
-    }
-}
-
-async function getNextEvents(
-    teamId
-) {
-
-    const response =
-        await fetch(
-            `${API_URL}/eventsnext.php?id=${teamId}`
-        );
-
-    if (!response.ok) {
-        throw new Error();
-    }
-
-    return response.json();
-}
-
-async function getLastEvents(
-    teamId
-) {
-
-    const response =
-        await fetch(
-            `${API_URL}/eventslast.php?id=${teamId}`
-        );
-
-    if (!response.ok) {
-        throw new Error();
-    }
-
-    return response.json();
-}
-
 
 // === Render ===
 function renderTeams(squadre) {
@@ -331,6 +248,7 @@ function renderTeams(squadre) {
             document.createElement("div");
 
         card.className = "card";
+        const alreadyFavorite = isFavorite(squadra.id);
 
         card.innerHTML = `
             <img
@@ -343,17 +261,24 @@ function renderTeams(squadre) {
             <p>${squadra.lega}</p>
 
             <p>${squadra.paese}</p>
-            <button class="favoritesBtn">Aggiungi ai preferiti</button>
+            <button class="favoritesBtn"
+            ${alreadyFavorite ? "disabled" : ""}>
+            ${alreadyFavorite ? "Aggiunto ai preferiti" : "Aggiungi ai preferiti"} 
+            </button>
         `;
 
-        const favoriteBtn = card.querySelector(".favoriteBtn");
-        favoriteBtn.addEventListener("click", )
+        const favoritesBtn = card.querySelector(".favoritesBtn");
+        favoritesBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            addFavorite(squadra);
+        });
 
         card.addEventListener(
             "click",
             () => {
                 loadTeamDetails(
-                    squadra.id
+                    squadra.id,
+                    squadra.nome
                 );
             }
         );
@@ -363,41 +288,66 @@ function renderTeams(squadre) {
 }
 
 function renderDetails(
+    teamName,
     prossimiEventi,
     ultimiEventi
 ) {
     eventSection.hidden = false;
     events.innerHTML = `
-
-        <div class="details-container">
-
-            <div class="events-section">
+    <h2 class="teamTitle">${teamName}</h2>
+    <div class="details-container">
+        <div class="events-section">
  
-                <h2>
-                    Prossime Partite
-                </h2>
+            <h2>
+                Prossime Partite
+            </h2>
 
-                ${createEventsList(
-                    prossimiEventi
-                )}
-
-            </div>
-
-            <div class="events-section">
-
-                <h2>
-                    Ultimi Risultati
-                </h2>
-
-                ${createResultsList(
-                    ultimiEventi
-                )}
-
-            </div>
+            ${createEventsList(prossimiEventi)}
 
         </div>
 
+        <div class="events-section">
+
+            <h2>
+                Ultimi Risultati
+            </h2>
+
+            ${createResultsList(ultimiEventi)}
+
+        </div>
+
+    </div>
+
     `;
+}
+
+function renderFavorites() {
+    const favorites = getFavorites();
+    favoritesTeam.innerHTML = "";
+    if (!favorites.length) {
+        favoritesTeam.innerHTML = `
+        <p> Non hai ancora salvato nessuna squadra. Cercane una qui sopra e aggiungila ai preferiti.`;
+        return
+    }
+    favorites.forEach(team => {
+        const card = document.createElement("div");
+        card.className = "favoriteCard";
+        card.innerHTML = `<img src= "${team.logo}" alt = "${team.nome}">
+        <h3>${team.nome}</h3>
+        <p>${team.lega}</p>
+        <p>${team.paese}</p>
+        <button class="removeBtn">Rimuovi</button>`;
+        card.addEventListener("click", () => {
+            loadTeamDetails(team.id, team.nome);
+        });
+        const removeBtn = card.querySelector(".removeBtn");
+        removeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeFavorite(team.id);
+        });
+
+        favoritesTeam.appendChild(card);
+    });
 }
 
 
@@ -517,7 +467,7 @@ const saveFavorites = (favorites) => {
 const addFavorite = (squadra) => {
     const favorites = getFavorites();
 
-    const exists = favorites.some(fav => fav.id===squadra.id);
+    const exists = favorites.some(fav => fav.id === squadra.id);
 
     if (exists) return;
     favorites.push(squadra);
@@ -527,11 +477,18 @@ const addFavorite = (squadra) => {
 
 const removeFavorite = (teamId) => {
     const favorites = getFavorites().filter(
-        fav=> fav.id !==teamId
+        fav => fav.id !== teamId
     );
     saveFavorites(favorites);
     renderFavorites();
-}
+};
+
+const isFavorite = (teamId) => {
+    return getFavorites().some(
+        fav => fav.id === teamId
+    );
+};
+renderFavorites();
 
 
 

@@ -11,8 +11,9 @@
     <header class="site-header">
       <!-- Titolo dell'app + form di ricerca -->
        <h1>SportsHub</h1>
+       <p>Cerca una squadra, scopri prossime partite e ultimi risultati.</p>
        <form id="searchForm">
-        <input type="text" id="inputTeam" placeholder="Cerca una squadra..." required>
+        <input type="text" id="inputTeam" placeholder="Es. Arsenal, Lakers, Real Madrid..." required>
         <button type="submit">Cerca</button>
        </form>
        
@@ -21,12 +22,13 @@
     <main class="container">
 
         <section id="preferiti-section">
-            <h2>Le tue squadre preferite</h2>
+            <h2 class="sectionTitle">⭐ Le tue squadre preferite</h2>
             <div id="favorites"></div>
         </section>
 
       <section id="risultati-section">
         <!-- Spinner, errore, lista risultati ricerca squadre -->
+         <h2 class="resultsTitle">Squadre trovate</h2>
          <div id="alert"></div>
          <div id="spinner" class="hidden">
             <div class="loader"></div>
